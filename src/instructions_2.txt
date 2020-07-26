@@ -1,0 +1,38 @@
+Like all the layers, the payload is again encoded with
+Adobe-flavoured ASCII85. After ASCII85 decoding the payload,
+apply the following operations to each byte:
+
+  1. Flip every second bit
+  2. Rotate the bits one position to the right
+
+For example:
+
+                        |      Binary      Decimal  Hex
+  ----------------------+-------------------------------
+  Starting value        | 1 0 1 1 0 1 0 0    180     B4
+                        |   v   v   v   v
+  Flip every second bit | 1 1 1 0 0 0 0 1    225     E1
+                        |  \ \ \ \ \ \ \ \
+  Rotate to the right   | 1 1 1 1 0 0 0 0 )  240     F0
+                        |  \_____________/
+
+Here are some hints:
+
+ - Bits can be flipped easily using XOR.
+
+ - You can extract specific bits into a separate value using
+   AND. This is called "masking".
+
+ - You can use OR to combine some of the bits from one value
+   with some of the bits from another value. Just make sure
+   that the unimportant bits are masked (all set to zero).
+   For example, if you want the first 4 bits of a byte
+   combined with the last 4 bits of another byte:
+   10100000 OR 00001010 = 10101010
+
+ - Bit shift operations discard bits on one side, and add
+   zeros to the other side. If you want to retain the bits
+   that will be shifted off the end of a byte, you probably
+   need to mask it into a separate variable before doing the
+   shift.
+
