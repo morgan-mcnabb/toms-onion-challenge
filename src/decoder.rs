@@ -32,7 +32,6 @@ impl Decoder
         let illegal_char_payload = &encoded_string[beginning_payload + 2..end_payload - 2];
         let mut legal_char_payload = remove_newlines(&illegal_char_payload);
         
-        //println!("{}", &encoded_string);
         self.decode_ascii85(&legal_char_payload);
         write_to_file(payload_num, instruction_string, &legal_char_payload);
     }
@@ -131,6 +130,4 @@ fn write_to_file(payload_num: i32, instructions_string: &str, payload_string: &s
 fn remove_newlines(illegal_string: &str) -> String
 {
     str::replace(&illegal_string, "\n", "")
-    
 }
-
