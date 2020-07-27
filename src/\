@@ -1,7 +1,6 @@
 use std::fs::File;
 use std::io::prelude::*;
 use std::char;
-use regex::Regex;
 
 pub struct Decoder
 {
@@ -26,13 +25,20 @@ impl Decoder
 
     pub fn begin_decoding_payload(&mut self, encoded_string: &str, payload_num: i32) 
     {   
-        let beginning_payload = Regex::new("<~").unwrap().find(&encoded_string).unwrap().start();
-        let end_payload = Regex::new("~>").unwrap().find(&encoded_string).unwrap().end();
-        let instruction_string = &encoded_string[0..beginning_payload];
-        let illegal_char_payload = &encoded_string[beginning_payload + 2..end_payload - 2];
+        let start_bytes = encoded_string.find("<~").unwrap_or(0);
+        let end_bytes = encoded_string.find("~>").unwrap_or(encoded_string.len());
+        let instruction_string = &encoded_string[0..start_bytes];
+        let illegal_char_payload = &encoded_string[start_bytes + 2..end_bytes];
         let mut legal_char_payload = remove_newlines(&illegal_char_payload);
         
-        //println!("{}", &encoded_string);
+        
+
+        if(payload_num == 2)
+        {
+           legal_char_payload = get_encoded_string_from_dirty_string(&legal_char_payload);
+           println!("{}", has_invalid_characters(&legal_char_payload));
+        }
+
         self.decode_ascii85(&legal_char_payload);
         write_to_file(payload_num, instruction_string, &legal_char_payload);
     }
@@ -62,7 +68,6 @@ impl Decoder
 
     pub fn decode_second_payload(&mut self)
     {
-        println!("Im here");
         let characters: Vec<char> = self.decoded_string.chars().collect();
         self.decoded_string.clear();
         for mut c in characters
@@ -71,6 +76,26 @@ impl Decoder
             self.decoded_string.push(c);
         }
     }
+
+    //pub fn decode_third_payload(&mut self, dirty_string: &str) -> String
+    //{
+    //   // let characters: Vec<char> = self.decoded_string.chars().collect();
+    //    let character: Vec<char> = dirty_string.chars().collect();
+    //    self.decoded_string.clear();
+    //    let mut count;
+
+    //    for mut c in characters
+    //    {
+    //        count = count_set_bits(c as u8);
+    //        if determine_if_byte_is_valid(c as u8, count)
+    //        {
+    //            c = (c as u8 & 0b1111_1110) as char;
+
+    //            self.decoded_string.push(c);
+    //        }
+    //    }
+    //}
+
     pub fn get_decoded_string(&self) -> String
     {
         String::from(&self.decoded_string)
@@ -108,6 +133,31 @@ pub fn flip_bits(character: char) -> char
     original_bits as char
 }
 
+pub fn count_set_bits(byte: u8) -> u8
+{
+    let mut count: u8 = 0;
+    let mut byte_to_change = byte >> 1;
+    for _i in 0..7
+    {
+        count += byte_to_change & 1;
+        byte_to_change >>= 1;
+    }
+    count
+}
+
+pub fn determine_if_byte_is_valid(byte: u8, count: u8) -> bool
+{
+    let parity_bit = byte & 0b0000_0001;
+
+    if count % 2 == 0 
+    {
+        parity_bit == 0
+    }
+    else
+    {
+        parity_bit == 1
+    }
+}
 
 fn write_to_file(payload_num: i32, instructions_string: &str, payload_string: &str) -> std::io::Result<()>
 {
@@ -128,9 +178,40 @@ fn write_to_file(payload_num: i32, instructions_string: &str, payload_string: &s
     Ok(())
 }
 
+pub fn get_encoded_string_from_dirty_string(dirty_string: &str) -> String
+{
+    let characters: Vec<char> = dirty_string.chars().collect();
+    let mut count;
+    let mut encoded_string: String = String::from("");
+    for mut c in characters
+    {
+        count = count_set_bits(c as u8);
+        if determine_if_byte_is_valid(c as u8, count)
+        {
+            c = (c as u8 & 0b1111_1110) as char;
+
+            encoded_string.push(c);
+        }
+    }
+
+    encoded_string
+}
+
 fn remove_newlines(illegal_string: &str) -> String
 {
     str::replace(&illegal_string, "\n", "")
-    
 }
 
+fn has_invalid_characters(string: &str) -> bool
+{
+    let bytes: &[u8] = string.as_bytes();
+
+    for b in bytes
+    {
+        if *b > 121
+        {
+            return true;
+        }
+    }
+    false
+}

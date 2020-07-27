@@ -1,38 +1,39 @@
-Like all the layers, the payload is again encoded with
-Adobe-flavoured ASCII85. After ASCII85 decoding the payload,
-apply the following operations to each byte:
+==[ Layer 2/6: Parity Bit ]=================================
 
-  1. Flip every second bit
-  2. Rotate the bits one position to the right
+Parity bits are used to detect when data is being corrupted
+-- for example, by a faulty cable. If the receiver of the
+data notices that a parity bit is not correct, that
+indicates that the data is being changed somehow.
 
-For example:
+    ----------------------------------------------------
 
-                        |      Binary      Decimal  Hex
-  ----------------------+-------------------------------
-  Starting value        | 1 0 1 1 0 1 0 0    180     B4
-                        |   v   v   v   v
-  Flip every second bit | 1 1 1 0 0 0 0 1    225     E1
-                        |  \ \ \ \ \ \ \ \
-  Rotate to the right   | 1 1 1 1 0 0 0 0 )  240     F0
-                        |  \_____________/
+For each byte of the payload, the seven most significant
+bits carry data, and the least significant bit is the parity
+bit. Combine the seven data bits from each byte where the
+parity bit is correct, discarding bytes where the parity bit
+is incorrect.
 
-Here are some hints:
+To determine if the parity bit is correct, first count how
+many '1' bits exist within the seven data bits. If the count
+is odd, the parity bit should be '1'. If the count is even,
+the parity bit should be '0'.
 
- - Bits can be flipped easily using XOR.
+For example, here is the byte 0xB2 (178 in decimal):
 
- - You can extract specific bits into a separate value using
-   AND. This is called "masking".
+  1 0 1 0 0 0 1 1 <-- Parity bit (least significant bit)
+  ^ ^ ^ ^ ^ ^ ^
+  | | | | | | |
+    Data bits
 
- - You can use OR to combine some of the bits from one value
-   with some of the bits from another value. Just make sure
-   that the unimportant bits are masked (all set to zero).
-   For example, if you want the first 4 bits of a byte
-   combined with the last 4 bits of another byte:
-   10100000 OR 00001010 = 10101010
+Of the data bits above, three of them are '1's. This is an
+odd number, so the '1' parity bit is correct.
 
- - Bit shift operations discard bits on one side, and add
-   zeros to the other side. If you want to retain the bits
-   that will be shifted off the end of a byte, you probably
-   need to mask it into a separate variable before doing the
-   shift.
+To make this layer a little bit easier, the byte size of the
+payload is guaranteed to be a multiple of eight. Every group
+of eight bytes contains 64 bits total, including 8 parity
+bits. Removing the 8 parity bits leaves behind 56 data
+bits, which is exactly 7 bytes.
+
+
+==[ Payload ]===============================================
 
